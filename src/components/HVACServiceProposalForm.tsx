@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import type { CompanyConfig } from '../App'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -175,7 +176,7 @@ const TH = 'text-left px-2 py-2 text-xs font-semibold text-green-700'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function HVACServiceProposalForm() {
+export default function HVACServiceProposalForm({ company }: { company: CompanyConfig }) {
   const [form, setForm] = useState<FormState>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -331,15 +332,19 @@ export default function HVACServiceProposalForm() {
             {/* Company info */}
             <div className="flex-1">
               <h1 className="text-xl font-extrabold text-green-700 tracking-tight leading-tight">
-                SOUTHERN AIRE HEATING &amp; COOLING, INC.
+                {company.name}
               </h1>
-              <p className="text-xs text-gray-500 mt-0.5 font-medium">
-                STATE CERTIFIED CAC182660 &nbsp;·&nbsp; LICENSED &nbsp;·&nbsp; INSURED
-              </p>
-              <p className="text-sm text-gray-600 mt-2">1789 Canova St. SE #A, Palm Bay, FL 32909</p>
+              {company.license && (
+                <p className="text-xs text-gray-500 mt-0.5 font-medium">{company.license}</p>
+              )}
+              {company.address && (
+                <p className="text-sm text-gray-600 mt-2">{company.address}{company.cityStateZip ? `, ${company.cityStateZip}` : ''}</p>
+              )}
               <div className="text-xs text-gray-500 mt-1.5 space-y-0.5">
-                <p>Beaches: (321) 728-0277 &nbsp;·&nbsp; Mainland: (321) 728-0374 &nbsp;·&nbsp; Fax: (321) 728-8114</p>
-                <p>www.southernaireheatingflorida.com &nbsp;·&nbsp; myler2e@aol.com</p>
+                {company.phones && <p>{company.phones}</p>}
+                {(company.website || company.email) && (
+                  <p>{[company.website, company.email].filter(Boolean).join(' · ')}</p>
+                )}
               </div>
             </div>
 
@@ -811,7 +816,7 @@ export default function HVACServiceProposalForm() {
           <div className={CARD}>
             <h2 className={`${SECTION_TITLE} mb-3`}>Authorization to Proceed</h2>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              By signing below, I authorize Southern Aire Heating &amp; Cooling, Inc. to perform
+              By signing below, I authorize {company.name} to perform
               the services described in this proposal at the estimated price stated. I understand
               that final costs may vary due to unforeseen conditions.
             </p>
@@ -898,7 +903,7 @@ export default function HVACServiceProposalForm() {
 
         {/* Footer */}
         <div className="text-center py-6 text-gray-400 text-sm italic">
-          Thank you for considering Southern Aire Heating &amp; Cooling, Inc.
+          Thank you for considering {company.name}.
         </div>
 
       </div>
