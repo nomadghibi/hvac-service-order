@@ -4,7 +4,6 @@ import HVACServiceProposalForm from './components/HVACServiceProposalForm'
 import './index.css'
 
 type FormMode = 'invoice' | 'proposal'
-type AppMode = 'southern-aire' | 'custom' | null
 
 export interface CompanyConfig {
   name: string
@@ -16,36 +15,13 @@ export interface CompanyConfig {
   email: string
 }
 
-// ─── Southern Aire hardcoded company ─────────────────────────────────────────
-
-const SOUTHERN_AIRE: CompanyConfig = {
-  name: 'SOUTHERN AIRE HEATING & COOLING, INC.',
-  license: 'STATE CERTIFIED CAC182660 · LICENSED · INSURED',
-  address: '1789 Canova St. SE #A',
-  cityStateZip: 'Palm Bay, FL 32909',
-  phones: 'Beaches: (321) 728-0277 · Mainland: (321) 728-0374 · Fax: (321) 728-8114',
-  website: 'www.southernaireheatingflorida.com',
-  email: 'myler2e@aol.com',
-}
-
-// ─── Persistence ──────────────────────────────────────────────────────────────
-
-const APP_MODE_KEY = 'hvac-app-mode'
 const COMPANY_KEY = 'hvac-company-config'
 
-const loadAppMode = (): AppMode => {
-  try {
-    const v = localStorage.getItem(APP_MODE_KEY)
-    if (v === 'southern-aire' || v === 'custom') return v
-  } catch {}
-  return null
-}
+const emptyCompany = (): CompanyConfig => ({
+  name: '', license: '', address: '', cityStateZip: '', phones: '', website: '', email: '',
+})
 
-const saveAppMode = (m: AppMode) => {
-  try { if (m) localStorage.setItem(APP_MODE_KEY, m) } catch {}
-}
-
-const loadCustomCompany = (): CompanyConfig | null => {
+const loadCompany = (): CompanyConfig | null => {
   try {
     const raw = localStorage.getItem(COMPANY_KEY)
     if (raw) return JSON.parse(raw) as CompanyConfig
@@ -53,13 +29,9 @@ const loadCustomCompany = (): CompanyConfig | null => {
   return null
 }
 
-const saveCustomCompany = (c: CompanyConfig) => {
+const saveCompany = (c: CompanyConfig) => {
   try { localStorage.setItem(COMPANY_KEY, JSON.stringify(c)) } catch {}
 }
-
-const emptyCompany = (): CompanyConfig => ({
-  name: '', license: '', address: '', cityStateZip: '', phones: '', website: '', email: '',
-})
 
 // ─── Company Setup / Edit Modal ───────────────────────────────────────────────
 
@@ -81,7 +53,7 @@ function CompanyModal({
 
   const handleSave = () => {
     if (!draft.name.trim()) { setError('Company name is required.'); return }
-    saveCustomCompany(draft)
+    saveCompany(draft)
     onSave(draft)
   }
 
@@ -145,87 +117,34 @@ function CompanyModal({
   )
 }
 
-// ─── App Mode Picker ──────────────────────────────────────────────────────────
-
-function AppModePicker({ onPick }: { onPick: (m: 'southern-aire' | 'custom') => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-extrabold text-gray-800">HVAC Service Forms</h1>
-          <p className="text-sm text-gray-500 mt-2">Select your company to get started</p>
-        </div>
-
-        <div className="space-y-3">
-          <button
-            type="button"
-            onClick={() => onPick('southern-aire')}
-            className="w-full bg-white border-2 border-blue-200 hover:border-blue-500 rounded-2xl p-5 text-left transition-colors group"
-          >
-            <p className="font-extrabold text-blue-700 text-base leading-tight">Southern Aire Heating &amp; Cooling, Inc.</p>
-            <p className="text-xs text-gray-400 mt-1">Palm Bay, FL · CAC182660</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onPick('custom')}
-            className="w-full bg-white border-2 border-gray-200 hover:border-gray-400 rounded-2xl p-5 text-left transition-colors"
-          >
-            <p className="font-bold text-gray-700 text-base">Other Company</p>
-            <p className="text-xs text-gray-400 mt-1">Enter your own company details</p>
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
-  const [appMode, setAppMode] = useState<AppMode>(loadAppMode)
   const [formMode, setFormMode] = useState<FormMode>('invoice')
-  const [customCompany, setCustomCompany] = useState<CompanyConfig | null>(loadCustomCompany)
+  const [company, setCompany] = useState<CompanyConfig | null>(loadCompany)
   const [editingCompany, setEditingCompany] = useState(false)
 
-  const handleModePick = (m: 'southern-aire' | 'custom') => {
-    saveAppMode(m)
-    setAppMode(m)
-  }
-
-  const handleCompanySave = (c: CompanyConfig) => {
-    setCustomCompany(c)
+  const handleSave = (c: CompanyConfig) => {
+    setCompany(c)
     setEditingCompany(false)
   }
 
-  const company = appMode === 'southern-aire' ? SOUTHERN_AIRE : customCompany
-
-  // First run: pick company
-  if (!appMode) return <AppModePicker onPick={handleModePick} />
-
-  // Custom mode but no company entered yet
-  if (appMode === 'custom' && !customCompany) {
-    return <CompanyModal initial={emptyCompany()} onSave={handleCompanySave} isFirstRun />
+  // First run: require company setup
+  if (!company) {
+    return <CompanyModal initial={emptyCompany()} onSave={handleSave} isFirstRun />
   }
 
   return (
     <>
-      {editingCompany && appMode === 'custom' && customCompany && (
+      {editingCompany && (
         <CompanyModal
-          initial={customCompany}
-          onSave={handleCompanySave}
+          initial={company}
+          onSave={handleSave}
           onCancel={() => setEditingCompany(false)}
           isFirstRun={false}
         />
       )}
 
-      {/* Mode switcher */}
       <div className="no-print fixed bottom-4 left-4 right-4 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-50 flex items-center rounded-full shadow-lg border border-gray-200 bg-white overflow-hidden">
         <button
           type="button"
@@ -245,19 +164,10 @@ export default function App() {
         >
           Proposal
         </button>
-        {/* Switch company */}
         <button
           type="button"
-          onClick={() => {
-            if (appMode === 'custom') {
-              setEditingCompany(true)
-            } else {
-              // Switch back to picker to change company
-              localStorage.removeItem(APP_MODE_KEY)
-              setAppMode(null)
-            }
-          }}
-          title={appMode === 'custom' ? 'Company settings' : 'Switch company'}
+          onClick={() => setEditingCompany(true)}
+          title="Company settings"
           className="px-3 py-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors border-l border-gray-200"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,8 +179,8 @@ export default function App() {
       </div>
 
       {formMode === 'invoice'
-        ? <HVACServiceOrderInvoiceForm company={company!} />
-        : <HVACServiceProposalForm company={company!} />
+        ? <HVACServiceOrderInvoiceForm company={company} />
+        : <HVACServiceProposalForm company={company} />
       }
     </>
   )
