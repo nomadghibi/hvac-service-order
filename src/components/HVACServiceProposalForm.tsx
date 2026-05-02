@@ -33,23 +33,20 @@ type EnvKey =
   | 'envDismantled'
   | 'envChangedOut'
 
-type ServiceType = 'cod' | 'charge' | 'no-charge' | ''
-type WarrantyType = 'regular' | 'warranty' | 'service-contract' | ''
+type PaymentType = 'cod' | 'charge' | 'no-charge' | ''
 
 interface FormState {
-  invoiceNumber: string
-  serviceType: ServiceType
+  proposalNumber: string
+  paymentType: PaymentType
   billTo: string
   street: string
   city: string
   phone: string
   date: string
-  promised: string
-  callBeforeAM: boolean
-  callBeforePM: boolean
+  validDays: string
   technician: string
-  authorizedBy: string
-  workToBePerformed: string
+  preparedBy: string
+  scopeOfWork: string
   eq1Make: string
   eq1Model: string
   eq1Serial: string
@@ -65,23 +62,21 @@ interface FormState {
   envChangedOut: EnvItem
   materials: MaterialRow[]
   labor: LaborRow[]
-  workPerformed: Record<string, boolean>
-  description: string
+  proposedWorkDescription: string
   recommendations: string
-  warrantyType: WarrantyType
-  customerSignature: string
-  signatureDate: string
+  acceptedBy: string
+  acceptedDate: string
   travelCharge: string
   taxRate: string
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = 'hvac-service-order-v1'
+const STORAGE_KEY = 'hvac-service-proposal-v1'
 
-const SERVICE_LABELS: Record<string, string> = {
+const PAYMENT_LABELS: Record<string, string> = {
   cod: 'C.O.D.',
-  charge: 'Charge',
+  charge: 'Charge Account',
   'no-charge': 'No Charge',
 }
 
@@ -93,88 +88,6 @@ const ENV_ITEMS: { key: EnvKey; label: string }[] = [
   { key: 'envDisposal', label: 'Disposal' },
   { key: 'envDismantled', label: 'Dismantled' },
   { key: 'envChangedOut', label: 'Changed Out / Replaced' },
-]
-
-const WORK_CATEGORIES = [
-  {
-    title: 'Condensing Unit',
-    items: [
-      'Leveled',
-      'Cleaned coil',
-      'Checked charge',
-      'Repaired leak in coil',
-      'Repaired leak in copper',
-      'Checked motor',
-      'Changed motor',
-      'Replaced belt',
-      'Adjusted belt',
-      'Replaced contactor',
-      'Replaced start relay',
-      'Replaced start capacitor',
-      'Replaced run capacitor',
-      'Cleaned/adjusted contactor',
-      'Repaired wiring',
-      'Replaced fuse',
-      'Replaced compressor',
-    ],
-  },
-  {
-    title: 'Condensate Drains',
-    items: [
-      'Cleaned main drain',
-      'Repaired main drain',
-      'Cleaned pan drain',
-      'Repaired pan drain',
-    ],
-  },
-  {
-    title: 'Furnace / Fan Coil',
-    items: [
-      'Replaced belt',
-      'Adjusted belt',
-      'Replaced pulley',
-      'Adjusted pulley',
-      'Cleaned blower',
-      'Replaced bearings',
-      'Oiled motor',
-      'Oiled bearings',
-      'Cleaned heat exchanger',
-      'Replaced heat exchanger',
-      'Cleaned/adjusted pilot',
-      'Replaced thermocouple',
-      'Repaired valve',
-      'Replaced valve',
-      'Cleaned burners',
-    ],
-  },
-  {
-    title: 'Evaporator Coil',
-    items: [
-      'Replaced expansion valve',
-      'Adjusted expansion valve',
-      'Replaced cap tube',
-      'Cleaned cap tube',
-      'Repaired coil leak',
-      'Repaired copper connection',
-      'Cleaned coil',
-      'Leveled coil',
-    ],
-  },
-  {
-    title: 'Other',
-    items: [
-      'Duct repaired',
-      'Duct adjusted',
-      'Thermostat replaced',
-      'Thermostat adjusted',
-      'Electric heater repaired',
-      'Cooling tower cleaned',
-      'Pump greased',
-      'Pump repaired',
-      'Filters cleaned',
-      'Filters replaced',
-    ],
-  },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -208,19 +121,17 @@ const newLabor = (): LaborRow => ({
 const emptyEnv = (): EnvItem => ({ checked: false, qty: '', type: '' })
 
 const buildDefault = (): FormState => ({
-  invoiceNumber: '',
-  serviceType: '',
+  proposalNumber: '',
+  paymentType: '',
   billTo: '',
   street: '',
   city: '',
   phone: '',
   date: new Date().toISOString().split('T')[0],
-  promised: '',
-  callBeforeAM: false,
-  callBeforePM: false,
+  validDays: '30',
   technician: '',
-  authorizedBy: '',
-  workToBePerformed: '',
+  preparedBy: '',
+  scopeOfWork: '',
   eq1Make: '',
   eq1Model: '',
   eq1Serial: '',
@@ -234,14 +145,12 @@ const buildDefault = (): FormState => ({
   envDisposal: emptyEnv(),
   envDismantled: emptyEnv(),
   envChangedOut: emptyEnv(),
-  materials: [newMaterial(), newMaterial(), newMaterial(), newMaterial(), newMaterial()],
-  labor: [newLabor(), newLabor(), newLabor()],
-  workPerformed: {},
-  description: '',
+  materials: [newMaterial(), newMaterial()],
+  labor: [newLabor(), newLabor()],
+  proposedWorkDescription: '',
   recommendations: '',
-  warrantyType: '',
-  customerSignature: '',
-  signatureDate: '',
+  acceptedBy: '',
+  acceptedDate: '',
   travelCharge: '',
   taxRate: '0',
 })
@@ -249,15 +158,15 @@ const buildDefault = (): FormState => ({
 // ─── Shared class strings ─────────────────────────────────────────────────────
 
 const INPUT =
-  'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white transition-colors'
+  'w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white transition-colors'
 const LABEL = 'block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1'
 const CARD = 'bg-white rounded-xl border border-gray-200 shadow-sm p-5'
-const SECTION_TITLE = 'text-sm font-bold text-blue-700 uppercase tracking-wide'
-const TH = 'text-left px-2 py-2 text-xs font-semibold text-blue-700'
+const SECTION_TITLE = 'text-sm font-bold text-green-700 uppercase tracking-wide'
+const TH = 'text-left px-2 py-2 text-xs font-semibold text-green-700'
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function HVACServiceOrderInvoiceForm() {
+export default function HVACServiceProposalForm() {
   const [form, setForm] = useState<FormState>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -267,7 +176,7 @@ export default function HVACServiceOrderInvoiceForm() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ env: true })
+  const [envOpen, setEnvOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -333,25 +242,18 @@ export default function HVACServiceOrderInvoiceForm() {
     }))
   }
 
-  // ── Work performed ──
-  const toggleWork = (wkey: string) =>
-    setForm((p) => ({
-      ...p,
-      workPerformed: { ...p.workPerformed, [wkey]: !p.workPerformed[wkey] },
-    }))
-
   // ── Totals ──
   const totalMaterials = form.materials.reduce((s, r) => s + parseNum(r.amount), 0)
   const totalLabor = form.labor.reduce((s, r) => s + parseNum(r.amount), 0)
   const travel = parseNum(form.travelCharge)
   const subtotal = totalMaterials + totalLabor + travel
   const tax = subtotal * (parseNum(form.taxRate) / 100)
-  const finalTotal = subtotal + tax
+  const estimatedTotal = subtotal + tax
 
   // ── Validation + print ──
   const validate = () => {
     const errs: Record<string, string> = {}
-    if (!form.invoiceNumber.trim()) errs.invoiceNumber = 'Required'
+    if (!form.proposalNumber.trim()) errs.proposalNumber = 'Required'
     if (!form.billTo.trim()) errs.billTo = 'Required'
     if (!form.date) errs.date = 'Required'
     setErrors(errs)
@@ -363,7 +265,7 @@ export default function HVACServiceOrderInvoiceForm() {
   }
 
   const handleClear = () => {
-    if (window.confirm('Clear all form data? This cannot be undone.')) {
+    if (window.confirm('Clear all proposal data? This cannot be undone.')) {
       localStorage.removeItem(STORAGE_KEY)
       setForm(buildDefault())
       setErrors({})
@@ -378,14 +280,14 @@ export default function HVACServiceOrderInvoiceForm() {
       {/* ── Sticky action bar ── */}
       <div className="no-print sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
             <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
             </svg>
           </div>
           <div>
-            <span className="font-semibold text-gray-800 text-sm">HVAC Service Order</span>
+            <span className="font-semibold text-gray-800 text-sm">HVAC Service Proposal</span>
             <span className="hidden sm:inline text-gray-400 text-xs ml-2">· Auto-saved</span>
           </div>
         </div>
@@ -400,7 +302,7 @@ export default function HVACServiceOrderInvoiceForm() {
           <button
             type="button"
             onClick={handlePrint}
-            className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-1.5 transition-colors"
+            className="px-4 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center gap-1.5 transition-colors"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -419,7 +321,7 @@ export default function HVACServiceOrderInvoiceForm() {
 
             {/* Company info */}
             <div className="flex-1">
-              <h1 className="text-xl font-extrabold text-blue-700 tracking-tight leading-tight">
+              <h1 className="text-xl font-extrabold text-green-700 tracking-tight leading-tight">
                 SOUTHERN AIRE HEATING &amp; COOLING, INC.
               </h1>
               <p className="text-xs text-gray-500 mt-0.5 font-medium">
@@ -432,41 +334,41 @@ export default function HVACServiceOrderInvoiceForm() {
               </div>
             </div>
 
-            {/* Invoice meta */}
+            {/* Proposal meta */}
             <div className="flex flex-col gap-3 w-full md:w-64">
-              <div className="text-center bg-blue-600 text-white rounded-lg py-3 px-4">
+              <div className="text-center bg-green-600 text-white rounded-lg py-3 px-4">
                 <p className="text-xs font-semibold tracking-widest uppercase opacity-80">HVAC</p>
-                <p className="text-lg font-extrabold tracking-wide">SERVICE ORDER</p>
-                <p className="text-sm font-bold tracking-widest">INVOICE</p>
+                <p className="text-lg font-extrabold tracking-wide">SERVICE PROPOSAL</p>
+                <p className="text-sm font-bold tracking-widest">ESTIMATE</p>
               </div>
 
               <div>
-                <label className={LABEL}>Invoice #</label>
+                <label className={LABEL}>Proposal #</label>
                 <input
-                  className={`${INPUT} text-base font-bold text-red-600 ${errors.invoiceNumber ? 'border-red-400 focus:ring-red-400' : ''}`}
-                  value={form.invoiceNumber}
-                  onChange={(e) => set('invoiceNumber', e.target.value)}
-                  placeholder="e.g. 75977"
+                  className={`${INPUT} text-base font-bold text-red-600 ${errors.proposalNumber ? 'border-red-400 focus:ring-red-400' : ''}`}
+                  value={form.proposalNumber}
+                  onChange={(e) => set('proposalNumber', e.target.value)}
+                  placeholder="e.g. P-1001"
                 />
-                {errors.invoiceNumber && (
-                  <p className="text-xs text-red-500 mt-0.5">{errors.invoiceNumber}</p>
+                {errors.proposalNumber && (
+                  <p className="text-xs text-red-500 mt-0.5">{errors.proposalNumber}</p>
                 )}
               </div>
 
               <div>
-                <label className={LABEL}>Service Type</label>
+                <label className={LABEL}>Payment Terms</label>
                 <div className="flex gap-3 flex-wrap">
                   {(['cod', 'charge', 'no-charge'] as const).map((t) => (
                     <label key={t} className="flex items-center gap-1.5 cursor-pointer">
                       <input
                         type="radio"
-                        name="serviceType"
+                        name="paymentType"
                         value={t}
-                        checked={form.serviceType === t}
-                        onChange={() => set('serviceType', t)}
-                        className="accent-blue-600"
+                        checked={form.paymentType === t}
+                        onChange={() => set('paymentType', t)}
+                        className="accent-green-600"
                       />
-                      <span className="text-sm font-medium text-gray-700">{SERVICE_LABELS[t]}</span>
+                      <span className="text-sm font-medium text-gray-700">{PAYMENT_LABELS[t]}</span>
                     </label>
                   ))}
                 </div>
@@ -522,7 +424,7 @@ export default function HVACServiceOrderInvoiceForm() {
             </div>
 
             <div>
-              <label className={LABEL}>Date *</label>
+              <label className={LABEL}>Proposal Date *</label>
               <input
                 type="date"
                 className={`${INPUT} ${errors.date ? 'border-red-400' : ''}`}
@@ -533,17 +435,19 @@ export default function HVACServiceOrderInvoiceForm() {
             </div>
 
             <div>
-              <label className={LABEL}>Promised Date / Time</label>
+              <label className={LABEL}>Valid for (days)</label>
               <input
+                type="number"
+                min="1"
                 className={INPUT}
-                value={form.promised}
-                onChange={(e) => set('promised', e.target.value)}
-                placeholder="MM/DD/YYYY HH:MM"
+                value={form.validDays}
+                onChange={(e) => set('validDays', e.target.value)}
+                placeholder="30"
               />
             </div>
 
             <div>
-              <label className={LABEL}>Technician</label>
+              <label className={LABEL}>Technician / Estimator</label>
               <input
                 className={INPUT}
                 value={form.technician}
@@ -553,39 +457,23 @@ export default function HVACServiceOrderInvoiceForm() {
             </div>
 
             <div>
-              <label className={LABEL}>Authorized By</label>
+              <label className={LABEL}>Prepared By</label>
               <input
                 className={INPUT}
-                value={form.authorizedBy}
-                onChange={(e) => set('authorizedBy', e.target.value)}
-                placeholder="Authorized by"
+                value={form.preparedBy}
+                onChange={(e) => set('preparedBy', e.target.value)}
+                placeholder="Prepared by"
               />
             </div>
 
-            <div className="sm:col-span-2 flex flex-wrap gap-5">
-              {(['callBeforeAM', 'callBeforePM'] as const).map((k) => (
-                <label key={k} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form[k]}
-                    onChange={(e) => set(k, e.target.checked)}
-                    className="rounded accent-blue-600 w-4 h-4"
-                  />
-                  <span className="text-sm text-gray-700">
-                    {k === 'callBeforeAM' ? 'Call Before A.M.' : 'Call Before P.M.'}
-                  </span>
-                </label>
-              ))}
-            </div>
-
             <div className="sm:col-span-2">
-              <label className={LABEL}>Work to be Performed</label>
+              <label className={LABEL}>Scope of Work</label>
               <textarea
-                rows={3}
+                rows={4}
                 className={`${INPUT} resize-none`}
-                value={form.workToBePerformed}
-                onChange={(e) => set('workToBePerformed', e.target.value)}
-                placeholder="Describe the work requested..."
+                value={form.scopeOfWork}
+                onChange={(e) => set('scopeOfWork', e.target.value)}
+                placeholder="Describe the proposed work and scope..."
               />
             </div>
           </div>
@@ -600,7 +488,7 @@ export default function HVACServiceOrderInvoiceForm() {
               { label: 'Unit 2', makeK: 'eq2Make', modelK: 'eq2Model', serialK: 'eq2Serial' },
             ].map(({ label, makeK, modelK, serialK }) => (
               <div key={label} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
-                <p className="text-xs font-bold text-blue-600 uppercase tracking-wide">{label}</p>
+                <p className="text-xs font-bold text-green-600 uppercase tracking-wide">{label}</p>
                 <div>
                   <label className={LABEL}>Make</label>
                   <input
@@ -633,37 +521,37 @@ export default function HVACServiceOrderInvoiceForm() {
           </div>
         </div>
 
-        {/* ── 4. Environmental Checklist ── */}
+        {/* ── 4. Proposed Refrigerant Handling ── */}
         <div className={CARD}>
           <button
             type="button"
-            onClick={() => setCollapsed((p) => ({ ...p, env: !p.env }))}
+            onClick={() => setEnvOpen((p) => !p)}
             className="no-print w-full flex items-center justify-between"
           >
-            <h2 className={SECTION_TITLE}>Environmental Check List</h2>
+            <h2 className={SECTION_TITLE}>Proposed Refrigerant Handling</h2>
             <div className="flex items-center gap-2">
               {ENV_ITEMS.filter(({ key }) => (form[key] as EnvItem).checked).length > 0 && (
-                <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.5 rounded-full">
+                <span className="text-xs bg-green-100 text-green-700 font-semibold px-1.5 py-0.5 rounded-full">
                   {ENV_ITEMS.filter(({ key }) => (form[key] as EnvItem).checked).length}
                 </span>
               )}
               <svg
-                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${collapsed.env ? '' : 'rotate-180'}`}
+                className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${envOpen ? 'rotate-180' : ''}`}
                 fill="none" stroke="currentColor" viewBox="0 0 24 24"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </button>
-          <div className={`print:block ${collapsed.env ? 'hidden' : 'block'} mt-4`}>
+          <div className={`print:block ${envOpen ? 'block' : 'hidden'} mt-4`}>
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[500px]">
                 <thead>
-                  <tr className="bg-blue-50 border border-blue-200 rounded">
+                  <tr className="bg-green-50 border border-green-200 rounded">
                     <th className={`${TH} w-10`}></th>
                     <th className={TH}>Refrigerant Disposition</th>
-                    <th className={`${TH} w-28`}>Quantity</th>
-                    <th className={TH}>Type / Disposition Notes</th>
+                    <th className={`${TH} w-28`}>Est. Quantity</th>
+                    <th className={TH}>Type / Notes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -676,7 +564,7 @@ export default function HVACServiceOrderInvoiceForm() {
                             type="checkbox"
                             checked={item.checked}
                             onChange={(e) => updateEnv(key, 'checked', e.target.checked)}
-                            className="rounded accent-blue-600 w-4 h-4"
+                            className="rounded accent-green-600 w-4 h-4"
                           />
                         </td>
                         <td className="px-2 py-2 font-medium text-gray-700">{label}</td>
@@ -694,7 +582,7 @@ export default function HVACServiceOrderInvoiceForm() {
                             className={`${INPUT} ${!item.checked ? 'bg-gray-50 text-gray-400' : ''}`}
                             value={item.type}
                             onChange={(e) => updateEnv(key, 'type', e.target.value)}
-                            placeholder="Type or disposition notes..."
+                            placeholder="Type or notes..."
                             disabled={!item.checked}
                           />
                         </td>
@@ -707,13 +595,13 @@ export default function HVACServiceOrderInvoiceForm() {
           </div>
         </div>
 
-        {/* ── 5. Materials & Services ── */}
+        {/* ── 5. Estimated Materials & Services ── */}
         <div className={CARD}>
-          <h2 className={`${SECTION_TITLE} mb-4`}>Materials &amp; Services</h2>
+          <h2 className={`${SECTION_TITLE} mb-4`}>Estimated Materials &amp; Services</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
-                <tr className="bg-blue-50 border border-blue-200">
+                <tr className="bg-green-50 border border-green-200">
                   <th className={`${TH} w-20`}>Qty</th>
                   <th className={TH}>Description</th>
                   <th className={`${TH} w-28`}>Unit Price</th>
@@ -778,9 +666,9 @@ export default function HVACServiceOrderInvoiceForm() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-blue-200 bg-blue-50">
-                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-blue-700">
-                    Total Materials
+                <tr className="border-t-2 border-green-200 bg-green-50">
+                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-green-700">
+                    Est. Materials
                   </td>
                   <td className="px-2 py-2.5 text-sm font-bold text-red-600">{fmt(totalMaterials)}</td>
                   <td className="no-print"></td>
@@ -791,19 +679,19 @@ export default function HVACServiceOrderInvoiceForm() {
           <button
             type="button"
             onClick={addMaterial}
-            className="no-print mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="no-print mt-2 text-sm text-green-600 hover:text-green-800 font-medium"
           >
             + Add Row
           </button>
         </div>
 
-        {/* ── 6. Labor ── */}
+        {/* ── 6. Estimated Labor ── */}
         <div className={CARD}>
-          <h2 className={`${SECTION_TITLE} mb-4`}>Labor</h2>
+          <h2 className={`${SECTION_TITLE} mb-4`}>Estimated Labor</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
-                <tr className="bg-blue-50 border border-blue-200">
+                <tr className="bg-green-50 border border-green-200">
                   <th className={`${TH} w-20`}>Hours</th>
                   <th className={TH}>Description</th>
                   <th className={`${TH} w-28`}>Rate / hr</th>
@@ -869,9 +757,9 @@ export default function HVACServiceOrderInvoiceForm() {
                 ))}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-blue-200 bg-blue-50">
-                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-blue-700">
-                    Total Labor
+                <tr className="border-t-2 border-green-200 bg-green-50">
+                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-green-700">
+                    Est. Labor
                   </td>
                   <td className="px-2 py-2.5 text-sm font-bold text-red-600">{fmt(totalLabor)}</td>
                   <td className="no-print"></td>
@@ -882,27 +770,27 @@ export default function HVACServiceOrderInvoiceForm() {
           <button
             type="button"
             onClick={addLabor}
-            className="no-print mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+            className="no-print mt-2 text-sm text-green-600 hover:text-green-800 font-medium"
           >
             + Add Row
           </button>
         </div>
 
-        {/* ── 7. Description of Work ── */}
+        {/* ── 7. Description of Proposed Work ── */}
         <div className={CARD}>
-          <h2 className={`${SECTION_TITLE} mb-3`}>Description of Work Performed</h2>
+          <h2 className={`${SECTION_TITLE} mb-3`}>Description of Proposed Work</h2>
           <textarea
             rows={5}
             className={`${INPUT} resize-none`}
-            value={form.description}
-            onChange={(e) => set('description', e.target.value)}
-            placeholder="Describe all work performed in detail..."
+            value={form.proposedWorkDescription}
+            onChange={(e) => set('proposedWorkDescription', e.target.value)}
+            placeholder="Describe all proposed work in detail..."
           />
         </div>
 
         {/* ── 8. Recommendations ── */}
         <div className={CARD}>
-          <h2 className={`${SECTION_TITLE} mb-3`}>Recommendations</h2>
+          <h2 className={`${SECTION_TITLE} mb-3`}>Additional Recommendations</h2>
           <textarea
             rows={4}
             className={`${INPUT} resize-none`}
@@ -912,152 +800,66 @@ export default function HVACServiceOrderInvoiceForm() {
           />
         </div>
 
-        {/* ── 9. Work Performed Checklist ── */}
+        {/* ── 9. Terms ── */}
         <div className={CARD}>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className={SECTION_TITLE}>Work Performed Checklist</h2>
-            <button
-              type="button"
-              onClick={() => {
-                const allOpen = WORK_CATEGORIES.every((c) => !collapsed[c.title])
-                const next: Record<string, boolean> = {}
-                if (allOpen) WORK_CATEGORIES.forEach((c) => (next[c.title] = true))
-                setCollapsed(next)
-              }}
-              className="no-print text-xs text-blue-500 hover:text-blue-700 font-medium"
-            >
-              {WORK_CATEGORIES.every((c) => !collapsed[c.title]) ? 'Collapse all' : 'Expand all'}
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {WORK_CATEGORIES.map((cat) => {
-              const isOpen = !collapsed[cat.title]
-              const checkedCount = cat.items.filter((item) => !!form.workPerformed[`${cat.title}:${item}`]).length
-              return (
-                <div key={cat.title} className="border border-gray-200 rounded-lg bg-gray-50 overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setCollapsed((p) => ({ ...p, [cat.title]: !p[cat.title] }))}
-                    className="no-print w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-100 transition-colors"
-                  >
-                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">{cat.title}</span>
-                    <div className="flex items-center gap-2">
-                      {checkedCount > 0 && (
-                        <span className="text-xs bg-blue-100 text-blue-700 font-semibold px-1.5 py-0.5 rounded-full">
-                          {checkedCount}
-                        </span>
-                      )}
-                      <svg
-                        className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </button>
-                  {/* print: always show; screen: show when open */}
-                  <div className={`print:block ${isOpen ? 'block' : 'hidden'}`}>
-                    <div className="px-3 pb-3 pt-1 space-y-1 border-t border-blue-100">
-                      {cat.items.map((item) => {
-                        const wkey = `${cat.title}:${item}`
-                        return (
-                          <label
-                            key={wkey}
-                            className="flex items-center gap-2 cursor-pointer rounded px-1 py-0.5 hover:bg-white transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={!!form.workPerformed[wkey]}
-                              onChange={() => toggleWork(wkey)}
-                              className="rounded accent-blue-600 w-3.5 h-3.5 flex-shrink-0"
-                            />
-                            <span className="text-xs text-gray-700">{item}</span>
-                          </label>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+          <h2 className={`${SECTION_TITLE} mb-3`}>Terms &amp; Conditions</h2>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-gray-700 leading-relaxed">
+            <strong>PROPOSAL TERMS:</strong> This proposal is an estimate based on information available at
+            time of inspection. Final costs may vary if unforeseen conditions are encountered. All materials
+            and equipment are subject to manufacturer availability and pricing at time of order. This proposal
+            is valid for <strong>{form.validDays || '30'} days</strong> from the proposal date. Work will be
+            scheduled upon receipt of signed authorization. All materials, parts, and equipment are warranted
+            by the manufacturer's written warranty only. Labor performed is warranted for 30 days unless
+            otherwise indicated in writing.
           </div>
         </div>
 
-        {/* ── 10. Warranty ── */}
-        <div className={CARD}>
-          <h2 className={`${SECTION_TITLE} mb-3`}>Warranty</h2>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-xs text-gray-700 leading-relaxed mb-4">
-            <strong>LIMITED WARRANTY:</strong> All materials, parts, and equipment are warranted by the
-            manufacturer's or supplier's written warranty only. All labor performed by the above named
-            company is warranted for 30 days unless otherwise indicated in writing. The above named
-            company makes no other warranties, express or implied, and its agents or technicians are not
-            authorized to make any such warranties on behalf of the above named company.
-          </div>
-          <div className="flex flex-wrap gap-5">
-            {(['regular', 'warranty', 'service-contract'] as const).map((w) => (
-              <label key={w} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="warrantyType"
-                  value={w}
-                  checked={form.warrantyType === w}
-                  onChange={() => set('warrantyType', w)}
-                  className="accent-blue-600"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  {w === 'service-contract' ? 'Service Contract' : w.charAt(0).toUpperCase() + w.slice(1)}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* ── 11 + 12. Signature + Totals ── */}
+        {/* ── 10. Authorization + Totals ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Signature */}
+          {/* Authorization */}
           <div className={CARD}>
-            <h2 className={`${SECTION_TITLE} mb-3`}>Customer Signature</h2>
+            <h2 className={`${SECTION_TITLE} mb-3`}>Authorization to Proceed</h2>
             <p className="text-xs text-gray-500 mb-4 leading-relaxed">
-              I hereby authorize the above work to be performed and agree that the company is not
-              responsible for loss or damage to vehicles or articles left in vehicles. I authorize
-              the above named company to perform the services described.
+              By signing below, I authorize Southern Aire Heating &amp; Cooling, Inc. to perform
+              the services described in this proposal at the estimated price stated. I understand
+              that final costs may vary due to unforeseen conditions.
             </p>
             <div className="space-y-3">
               <div>
-                <label className={LABEL}>Customer Signature</label>
+                <label className={LABEL}>Accepted By</label>
                 <input
                   className={`${INPUT} italic`}
-                  value={form.customerSignature}
-                  onChange={(e) => set('customerSignature', e.target.value)}
+                  value={form.acceptedBy}
+                  onChange={(e) => set('acceptedBy', e.target.value)}
                   placeholder="Type name as signature"
                 />
                 <div className="mt-1 border-b-2 border-gray-400 w-full" />
               </div>
               <div>
-                <label className={LABEL}>Date</label>
+                <label className={LABEL}>Date Accepted</label>
                 <input
                   type="date"
                   className={INPUT}
-                  value={form.signatureDate}
-                  onChange={(e) => set('signatureDate', e.target.value)}
+                  value={form.acceptedDate}
+                  onChange={(e) => set('acceptedDate', e.target.value)}
                 />
               </div>
             </div>
           </div>
 
           {/* Totals */}
-          <div className={`${CARD} border-red-200`}>
-            <h2 className={`${SECTION_TITLE} mb-4`}>Total Summary</h2>
+          <div className={`${CARD} border-green-200`}>
+            <h2 className={`${SECTION_TITLE} mb-4`}>Estimated Total</h2>
             <div className="space-y-2">
 
               <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Total Materials</span>
+                <span className="text-sm text-gray-600">Est. Materials</span>
                 <span className="text-sm font-semibold tabular-nums text-gray-800">{fmt(totalMaterials)}</span>
               </div>
 
               <div className="flex justify-between items-center py-1.5 border-b border-gray-100">
-                <span className="text-sm text-gray-600">Total Labor</span>
+                <span className="text-sm text-gray-600">Est. Labor</span>
                 <span className="text-sm font-semibold tabular-nums text-gray-800">{fmt(totalLabor)}</span>
               </div>
 
@@ -1067,7 +869,7 @@ export default function HVACServiceOrderInvoiceForm() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-28 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums"
+                  className="w-28 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-green-500 tabular-nums"
                   value={form.travelCharge}
                   onChange={(e) => set('travelCharge', e.target.value)}
                   placeholder="0.00"
@@ -1080,7 +882,7 @@ export default function HVACServiceOrderInvoiceForm() {
                   type="number"
                   min="0"
                   step="0.01"
-                  className="w-28 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 tabular-nums"
+                  className="w-28 border border-gray-300 rounded px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-green-500 tabular-nums"
                   value={form.taxRate}
                   onChange={(e) => set('taxRate', e.target.value)}
                   placeholder="0"
@@ -1092,17 +894,21 @@ export default function HVACServiceOrderInvoiceForm() {
                 <span className="text-sm tabular-nums text-gray-700">{fmt(tax)}</span>
               </div>
 
-              <div className="flex justify-between items-center py-3 px-4 mt-2 bg-red-50 rounded-lg border border-red-200">
-                <span className="font-bold text-gray-800 uppercase tracking-wide">Total</span>
-                <span className="text-2xl font-extrabold text-red-600 tabular-nums">{fmt(finalTotal)}</span>
+              <div className="flex justify-between items-center py-3 px-4 mt-2 bg-green-50 rounded-lg border border-green-200">
+                <span className="font-bold text-gray-800 uppercase tracking-wide">Est. Total</span>
+                <span className="text-2xl font-extrabold text-green-700 tabular-nums">{fmt(estimatedTotal)}</span>
               </div>
+
+              <p className="text-xs text-gray-400 italic text-center pt-1">
+                Estimate valid for {form.validDays || '30'} days from proposal date
+              </p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
         <div className="text-center py-6 text-gray-400 text-sm italic">
-          Thank you for your business — Southern Aire Heating &amp; Cooling, Inc.
+          Thank you for considering Southern Aire Heating &amp; Cooling, Inc.
         </div>
 
       </div>
