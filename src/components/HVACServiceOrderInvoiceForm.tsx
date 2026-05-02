@@ -276,7 +276,11 @@ export default function HVACServiceOrderInvoiceForm() {
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ env: true })
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = { env: true }
+    WORK_CATEGORIES.forEach((c) => { init[c.title] = true })
+    return init
+  })
 
   useEffect(() => {
     try {
