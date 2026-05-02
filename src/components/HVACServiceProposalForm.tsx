@@ -73,6 +73,15 @@ interface FormState {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'hvac-service-proposal-v1'
+const COUNTER_KEY = 'hvac-proposal-counter'
+const COUNTER_START = 1000
+
+const nextProposalNumber = (): string => {
+  const last = parseInt(localStorage.getItem(COUNTER_KEY) ?? String(COUNTER_START), 10)
+  const next = last + 1
+  localStorage.setItem(COUNTER_KEY, String(next))
+  return `P-${next}`
+}
 
 const PAYMENT_LABELS: Record<string, string> = {
   cod: 'C.O.D.',
@@ -120,8 +129,8 @@ const newLabor = (): LaborRow => ({
 
 const emptyEnv = (): EnvItem => ({ checked: false, qty: '', type: '' })
 
-const buildDefault = (): FormState => ({
-  proposalNumber: '',
+const buildDefault = (proposalNumber = ''): FormState => ({
+  proposalNumber,
   paymentType: '',
   billTo: '',
   street: '',
@@ -172,7 +181,7 @@ export default function HVACServiceProposalForm() {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) return JSON.parse(raw) as FormState
     } catch {}
-    return buildDefault()
+    return buildDefault(nextProposalNumber())
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -267,7 +276,7 @@ export default function HVACServiceProposalForm() {
   const handleClear = () => {
     if (window.confirm('Clear all proposal data? This cannot be undone.')) {
       localStorage.removeItem(STORAGE_KEY)
-      setForm(buildDefault())
+      setForm(buildDefault(nextProposalNumber()))
       setErrors({})
     }
   }
