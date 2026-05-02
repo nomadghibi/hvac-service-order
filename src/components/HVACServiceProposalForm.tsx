@@ -322,7 +322,7 @@ export default function HVACServiceProposalForm() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-5xl mx-auto px-4 py-6 pb-24 space-y-4">
 
         {/* ── 1. Header ── */}
         <div className={CARD}>
@@ -607,7 +607,40 @@ export default function HVACServiceProposalForm() {
         {/* ── 5. Estimated Materials & Services ── */}
         <div className={CARD}>
           <h2 className={`${SECTION_TITLE} mb-4`}>Estimated Materials &amp; Services</h2>
-          <div className="overflow-x-auto">
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2">
+            {form.materials.map((row) => (
+              <div key={row.id} className="border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
+                <div>
+                  <label className={LABEL}>Description</label>
+                  <input className={INPUT} value={row.description} onChange={(e) => updateMaterial(row.id, 'description', e.target.value)} placeholder="Material or service" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className={LABEL}>Qty</label>
+                    <input type="number" min="0" className={INPUT} value={row.qty} onChange={(e) => updateMaterial(row.id, 'qty', e.target.value)} placeholder="0" />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Unit Price</label>
+                    <input type="number" min="0" step="0.01" className={INPUT} value={row.unitPrice} onChange={(e) => updateMaterial(row.id, 'unitPrice', e.target.value)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Amount</label>
+                    <input type="number" min="0" step="0.01" className={`${INPUT} font-semibold`} value={row.amount} onChange={(e) => updateMaterial(row.id, 'amount', e.target.value)} placeholder="0.00" />
+                  </div>
+                </div>
+                <button type="button" onClick={() => removeMaterial(row.id)} className="no-print text-xs text-red-400 hover:text-red-600 font-medium">Remove</button>
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-1 px-1 border-t border-green-200">
+              <span className="text-sm font-bold text-green-700">Est. Materials</span>
+              <span className="text-sm font-bold text-red-600">{fmt(totalMaterials)}</span>
+            </div>
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="bg-green-50 border border-green-200">
@@ -622,82 +655,73 @@ export default function HVACServiceProposalForm() {
                 {form.materials.map((row) => (
                   <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        className={INPUT}
-                        value={row.qty}
-                        onChange={(e) => updateMaterial(row.id, 'qty', e.target.value)}
-                        placeholder="0"
-                      />
+                      <input type="number" min="0" className={INPUT} value={row.qty} onChange={(e) => updateMaterial(row.id, 'qty', e.target.value)} placeholder="0" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        className={INPUT}
-                        value={row.description}
-                        onChange={(e) => updateMaterial(row.id, 'description', e.target.value)}
-                        placeholder="Material or service"
-                      />
+                      <input className={INPUT} value={row.description} onChange={(e) => updateMaterial(row.id, 'description', e.target.value)} placeholder="Material or service" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className={INPUT}
-                        value={row.unitPrice}
-                        onChange={(e) => updateMaterial(row.id, 'unitPrice', e.target.value)}
-                        placeholder="0.00"
-                      />
+                      <input type="number" min="0" step="0.01" className={INPUT} value={row.unitPrice} onChange={(e) => updateMaterial(row.id, 'unitPrice', e.target.value)} placeholder="0.00" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className={`${INPUT} font-semibold`}
-                        value={row.amount}
-                        onChange={(e) => updateMaterial(row.id, 'amount', e.target.value)}
-                        placeholder="0.00"
-                      />
+                      <input type="number" min="0" step="0.01" className={`${INPUT} font-semibold`} value={row.amount} onChange={(e) => updateMaterial(row.id, 'amount', e.target.value)} placeholder="0.00" />
                     </td>
                     <td className="px-2 py-1.5 no-print">
-                      <button
-                        type="button"
-                        onClick={() => removeMaterial(row.id)}
-                        className="text-gray-300 hover:text-red-500 text-xl leading-none transition-colors"
-                        title="Remove row"
-                      >
-                        ×
-                      </button>
+                      <button type="button" onClick={() => removeMaterial(row.id)} className="text-gray-300 hover:text-red-500 text-xl leading-none transition-colors" title="Remove row">×</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-green-200 bg-green-50">
-                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-green-700">
-                    Est. Materials
-                  </td>
+                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-green-700">Est. Materials</td>
                   <td className="px-2 py-2.5 text-sm font-bold text-red-600">{fmt(totalMaterials)}</td>
                   <td className="no-print"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          <button
-            type="button"
-            onClick={addMaterial}
-            className="no-print mt-2 text-sm text-green-600 hover:text-green-800 font-medium"
-          >
-            + Add Row
-          </button>
+
+          <button type="button" onClick={addMaterial} className="no-print mt-3 text-sm text-green-600 hover:text-green-800 font-medium">+ Add Row</button>
         </div>
 
         {/* ── 6. Estimated Labor ── */}
         <div className={CARD}>
           <h2 className={`${SECTION_TITLE} mb-4`}>Estimated Labor</h2>
-          <div className="overflow-x-auto">
+
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-2">
+            {form.labor.map((row) => (
+              <div key={row.id} className="border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
+                <div>
+                  <label className={LABEL}>Description</label>
+                  <input className={INPUT} value={row.description} onChange={(e) => updateLabor(row.id, 'description', e.target.value)} placeholder="Labor description" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className={LABEL}>Hours</label>
+                    <input type="number" min="0" step="0.5" className={INPUT} value={row.hours} onChange={(e) => updateLabor(row.id, 'hours', e.target.value)} placeholder="0.0" />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Rate / hr</label>
+                    <input type="number" min="0" step="0.01" className={INPUT} value={row.rate} onChange={(e) => updateLabor(row.id, 'rate', e.target.value)} placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className={LABEL}>Amount</label>
+                    <input type="number" min="0" step="0.01" className={`${INPUT} font-semibold`} value={row.amount} onChange={(e) => updateLabor(row.id, 'amount', e.target.value)} placeholder="0.00" />
+                  </div>
+                </div>
+                <button type="button" onClick={() => removeLabor(row.id)} className="no-print text-xs text-red-400 hover:text-red-600 font-medium">Remove</button>
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-1 px-1 border-t border-green-200">
+              <span className="text-sm font-bold text-green-700">Est. Labor</span>
+              <span className="text-sm font-bold text-red-600">{fmt(totalLabor)}</span>
+            </div>
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="bg-green-50 border border-green-200">
@@ -712,77 +736,34 @@ export default function HVACServiceProposalForm() {
                 {form.labor.map((row) => (
                   <tr key={row.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        className={INPUT}
-                        value={row.hours}
-                        onChange={(e) => updateLabor(row.id, 'hours', e.target.value)}
-                        placeholder="0.0"
-                      />
+                      <input type="number" min="0" step="0.5" className={INPUT} value={row.hours} onChange={(e) => updateLabor(row.id, 'hours', e.target.value)} placeholder="0.0" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        className={INPUT}
-                        value={row.description}
-                        onChange={(e) => updateLabor(row.id, 'description', e.target.value)}
-                        placeholder="Labor description"
-                      />
+                      <input className={INPUT} value={row.description} onChange={(e) => updateLabor(row.id, 'description', e.target.value)} placeholder="Labor description" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className={INPUT}
-                        value={row.rate}
-                        onChange={(e) => updateLabor(row.id, 'rate', e.target.value)}
-                        placeholder="0.00"
-                      />
+                      <input type="number" min="0" step="0.01" className={INPUT} value={row.rate} onChange={(e) => updateLabor(row.id, 'rate', e.target.value)} placeholder="0.00" />
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className={`${INPUT} font-semibold`}
-                        value={row.amount}
-                        onChange={(e) => updateLabor(row.id, 'amount', e.target.value)}
-                        placeholder="0.00"
-                      />
+                      <input type="number" min="0" step="0.01" className={`${INPUT} font-semibold`} value={row.amount} onChange={(e) => updateLabor(row.id, 'amount', e.target.value)} placeholder="0.00" />
                     </td>
                     <td className="px-2 py-1.5 no-print">
-                      <button
-                        type="button"
-                        onClick={() => removeLabor(row.id)}
-                        className="text-gray-300 hover:text-red-500 text-xl leading-none transition-colors"
-                        title="Remove row"
-                      >
-                        ×
-                      </button>
+                      <button type="button" onClick={() => removeLabor(row.id)} className="text-gray-300 hover:text-red-500 text-xl leading-none transition-colors" title="Remove row">×</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-green-200 bg-green-50">
-                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-green-700">
-                    Est. Labor
-                  </td>
+                  <td colSpan={3} className="px-2 py-2.5 text-right text-sm font-bold text-green-700">Est. Labor</td>
                   <td className="px-2 py-2.5 text-sm font-bold text-red-600">{fmt(totalLabor)}</td>
                   <td className="no-print"></td>
                 </tr>
               </tfoot>
             </table>
           </div>
-          <button
-            type="button"
-            onClick={addLabor}
-            className="no-print mt-2 text-sm text-green-600 hover:text-green-800 font-medium"
-          >
-            + Add Row
-          </button>
+
+          <button type="button" onClick={addLabor} className="no-print mt-3 text-sm text-green-600 hover:text-green-800 font-medium">+ Add Row</button>
         </div>
 
         {/* ── 7. Description of Proposed Work ── */}
